@@ -11,10 +11,22 @@ import undetected_chromedriver as uc
 import logging, json, os, sys, time, random
 from selenium import webdriver
 
+
 # driver = uc.Chrome(version_main=100)
 driver = webdriver.Chrome(executable_path="./chromedriver")
 
-driver.maximize_window()
+# driver.maximize_window()
+
+
+def extract_num(text):
+    int_text = ""
+    for char in text:
+        if char.isalnum():
+            int_text += char
+    return int(int_text)
+
+
+print(extract_num("(26)"))
 
 
 def clean_rimsize_attribute(text):
@@ -45,9 +57,9 @@ def handle_popup(driver):
         print("handled")
 
 
-driver.get(
-    "https://www.pitstoparabia.com/en/advancesearch?dir=asc&form_key=ZhnnkEn2CKFHEVxX&width=221&height=19&rim_size=235&rear_width=&rear_height=&rear_rim_size=&sizelocation=Dubai"
-)
+# driver.get(
+#     "https://www.pitstoparabia.com/en/advancesearch?dir=asc&form_key=ZhnnkEn2CKFHEVxX&width=221&height=19&rim_size=235&rear_width=&rear_height=&rear_rim_size=&sizelocation=Dubai"
+# )
 
 
 def load_all_tires(driver):
@@ -210,6 +222,9 @@ def parse_tire_sizes(driver):
                         )
                         click(search, driver)
                         time.sleep(3)
+
+                        # TODO: Load all tires
+                        # TODO: extract tires data
                         current_url = driver.current_url
                         search_writer.writerow(
                             (width_selected, height_selected, rim_selected, current_url)
@@ -219,7 +234,7 @@ def parse_tire_sizes(driver):
                         )
                         click(refine_result_bar, driver)
 
-                        # update elements that will be selected from in the loop
+                        # update driver elements to be used in the loop
                         if r < len(rims) - 1:
                             rims = rim_options(driver)
                     if h < len(heights) - 1:
@@ -228,4 +243,87 @@ def parse_tire_sizes(driver):
                     widths = width_options(driver)
 
 
-parse_tire_sizes(driver)
+# with open('search_urls.csv', 'r') as url:
+
+
+def load_all_tires(driver):
+    WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable(
+            (
+                By.XPATH,
+                "//div[@id='all-grid']//li/div",
+            )
+        )
+    )
+
+    tires_loaded = driver.find_elements(
+        by=By.XPATH, value="//div[@id='all-grid']//li/div"
+    )
+    num_tires = driver.find_element(
+        by=By.XPATH, value="//span[@id='number_count']"
+    ).text
+    load_count = 0
+    while len(tires_loaded) < extract_num(num_tires) and load_count < 15:
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        load_count += 1
+
+        WebDriverWait(driver, 30).until(
+            EC.presence_of_element_located(
+                (
+                    By.XPATH,
+                    "//div[@id='loadingmask2' and @style='display: none;']",
+                )
+            )
+        )
+        tires_loaded = driver.find_elements(
+            by=By.XPATH, value="//div[@id='all-grid']//li/div"
+        )
+
+
+# driver.get(
+#     "https://www.pitstoparabia.com/en/advancesearch?dir=asc&form_key=YTop2Giq9qdZ8Ke2&width=207&height=229&rim_size=22&rear_width=&rear_height=&rear_rim_size=&sizelocation=Dubai"
+# )
+
+# load_all_tires(driver)
+
+ATTRIBUTE_SET = "Default"
+TYPE = "Simple"
+QTY = 500
+IS_IN_STOCK = 1
+MANAGE_STOCK = 1
+USE_CONFIC_MANAGE_STOCK = 1
+STATUS = 1
+VISIBILITY = 4
+WEIGHT = 1
+TAX_CLASS_ID = "Taxable Goods"
+
+driver.get("https://www.pitstoparabia.com/en/sp-sport-lm704-3-28667")
+driver.get("https://www.pitstoparabia.com/en/thu-275-55r20-ht603-32228")
+
+
+def parse_tires_listing(driver):
+    page_response = driver.page_source
+    tires = page_response.xpath("//div[@id='all-grid']//li/div")
+    for tire in tires:
+        url = tire.xpath("//a[@class='prod_thumbnail']/@href").get()
+        if not url.startswith("http"):
+            url = url.strip("/")
+            url = f"https://www.pitstoparabia.com/{url}"
+
+        type_is_clearance = "".join(
+            tire.xpath("(//div[@class='discount'])[1]//text()").getall()
+        )
+
+
+def parse_tire_page(driver):
+    page_response = driver.page_source
+
+    extra_saving_column = "".join(
+        page_response.xpath("//div[@class='extra_discount clearfix']//text()").getall()
+    )
+    tyre_type = page_response.xpath("//div[@class='variants']/div/@title").get()
+    year_of_manufacture = (
+        page_response.xpath("//div[@title='Year of manufacture']/text()")
+        .get()
+        .replace(" ", "")
+    )
