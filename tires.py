@@ -86,8 +86,8 @@ def width_options(driver):
         )
     )
     click(width_button, driver)
-    WebDriverWait(driver, 10).until(
-        EC.element_to_be_clickable(
+    WebDriverWait(driver, 20).until(
+        EC.presence_of_element_located(
             (
                 By.XPATH,
                 "//div[@id='myModal' and @style='display: block;']//div[@class='filter_values']//li",
@@ -114,8 +114,8 @@ def height_options(driver):
 
     click(height_button, driver)
 
-    WebDriverWait(driver, 10).until(
-        EC.element_to_be_clickable(
+    WebDriverWait(driver, 20).until(
+        EC.presence_of_element_located(
             (
                 By.XPATH,
                 "//ul[@id='height']//li",
@@ -137,8 +137,8 @@ def rim_options(driver):
     )
     click(rimsize_button, driver)
 
-    WebDriverWait(driver, 10).until(
-        EC.element_to_be_clickable(
+    WebDriverWait(driver, 20).until(
+        EC.presence_of_element_located(
             (
                 By.XPATH,
                 "//ul[@id='rimsize']//li",
@@ -156,7 +156,7 @@ def parse_filters(driver):
         "https://www.pitstoparabia.com/en/advancesearch?dir=asc&form_key=YTop2Giq9qdZ8Ke2&width=207&height=229&rim_size=22&rear_width=&rear_height=&rear_rim_size=&sizelocation=Dubai"
     )
 
-    with open("search_urls.csv", "a") as url, open("tires.csv", "a") as tires:
+    with open("search_urls.csv", "a") as url, open("tires2.csv", "a") as tires:
         tire_writer = writer(tires)
         tire_writer.writerow(("width", "height", "rimsize", "tire url"))
 
@@ -166,8 +166,8 @@ def parse_filters(driver):
             )
             click(refine_result_bar, driver)
 
-            widths = width_options(driver)
-            for w, width in enumerate(widths[3:]):
+            widths = width_options(driver)[12:]
+            for w, width in enumerate(widths):
                 width_selected = select_n_close(widths[w], driver)
 
                 heights = height_options(driver)
@@ -208,7 +208,7 @@ def parse_filters(driver):
                     if h < len(heights) - 1:
                         heights = height_options(driver)
                 if w < len(widths) - 1:
-                    widths = width_options(driver)
+                    widths = width_options(driver)[12:]
 
 
 def load_all_tires(driver):
@@ -247,6 +247,7 @@ def load_all_tires(driver):
             by=By.XPATH, value="//div[@id='all-grid']//li/div"
         )
     logging.info(">>> All Tires loaded")
+    time.sleep(1)
 
     if load_count > 1:
         # multiple strategies to ensure driver returns to top of page
@@ -259,12 +260,14 @@ def load_all_tires(driver):
             action.perform()
         except:
             try:
-                action = ActionChains(driver)
-                action.send_keys(keys.HOME).build().perform()
-            except:
-                driver.execute_script(
-                    "window.scrollTo(0, -document.body.scrollHeight);"
+                top = driver.find_element(
+                    by=By.XPATH, value="(//div[@class='top_section'])[1]"
                 )
+                action = ActionChains(driver)
+                action.move_to_element(to_element=top)
+                action.perform()
+            except:
+                driver.execute_script("window.scrollTo(document.body.scrollHeight, 0);")
 
 
 def parse_filter_result(driver, csv_writer, width, height, rimsize):
@@ -317,7 +320,7 @@ def parse_tire_page(driver):
     service_desc = (
         "" or page_response.xpath("//div[@class='serv_desc']/text()[2]").get()
     )
-    tyre_load = service_desc.split()[0]
+    tyre_load = servcode o  ice_desc.split()[0]
     tyre_speed = "".join(service_desc[1:]).strip()
     short_description = name
     if page_response.xpath("//img[@title='Run Flat']"):
