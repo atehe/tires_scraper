@@ -30,12 +30,12 @@ class PitstoparabiaSpider(scrapy.Spider):
     def tires_to_csv(self, response):
         driver = response.meta["driver"]
 
-        if not os.path.exists("./utils/all_tires.csv"):
-            parse_filters(driver, "./utils/all_tires.csv")
+        # if not os.path.exists("./utils/all_tires.csv"):
+        parse_filters(driver, "./utils/all_tires.csv")
 
         tire_df = pd.read_csv("./utils/all_tires.csv")
         tire_df.drop_duplicates(keep="first", inplace=True)
-        for width, height, rimszize, url in tire_df.values[200:400]:
+        for width, height, rimszize, url in tire_df.values:
 
             yield SeleniumRequest(
                 url=url,

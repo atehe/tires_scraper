@@ -131,6 +131,7 @@ def rim_options(driver):
 
 
 def parse_filters(driver, output_csv):
+    driver.maximize_window()
     with open(output_csv, "a") as tires:
         tire_writer = writer(tires)
         tire_writer.writerow(("width", "height", "rimsize", "tire url"))
@@ -141,7 +142,7 @@ def parse_filters(driver, output_csv):
             )
             click(refine_result_bar, driver)
 
-            widths = width_options(driver)[12:]
+            widths = width_options(driver)
             for w, width in enumerate(widths):
                 width_selected = select_n_close(widths[w], driver)
 
@@ -190,7 +191,7 @@ def parse_filters(driver, output_csv):
                     if h < len(heights) - 1:
                         heights = height_options(driver)
                 if w < len(widths) - 1:
-                    widths = width_options(driver)[12:]
+                    widths = width_options(driver)
 
 
 def load_all_tires(driver):
@@ -214,10 +215,15 @@ def load_all_tires(driver):
     ).text
     load_count = 0
     while len(tires_loaded) < extract_num(num_tires):
+        if load_count > 20:
+            try:
+                scroll_up(driver)
+            except:
+                pass
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
         load_count += 1
 
-        WebDriverWait(driver, 30).until(
+        WebDriverWait(driver, 20).until(
             EC.presence_of_element_located(
                 (
                     By.XPATH,
@@ -232,25 +238,29 @@ def load_all_tires(driver):
     time.sleep(1)
 
     if load_count > 1:
-        # multiple strategies to ensure driver returns
-        # to top of the page(to prevent bot crash)
+        scroll_up(driver)
+
+
+def scroll_up(driver):
+    """multiple strategies to ensure driver returns
+    to top of the page(to prevent bot crash)"""
+    try:
+        refine_result_bar = driver.find_element(
+            by=By.XPATH, value="//div[@id='accordion_refine_result']"
+        )
+        action = ActionChains(driver)
+        action.move_to_element(to_element=refine_result_bar)
+        action.perform()
+    except:
         try:
-            refine_result_bar = driver.find_element(
-                by=By.XPATH, value="//div[@id='accordion_refine_result']"
+            top = driver.find_element(
+                by=By.XPATH, value="(//div[@class='top_section'])[1]"
             )
             action = ActionChains(driver)
-            action.move_to_element(to_element=refine_result_bar)
+            action.move_to_element(to_element=top)
             action.perform()
         except:
-            try:
-                top = driver.find_element(
-                    by=By.XPATH, value="(//div[@class='top_section'])[1]"
-                )
-                action = ActionChains(driver)
-                action.move_to_element(to_element=top)
-                action.perform()
-            except:
-                driver.execute_script("window.scrollTo(document.body.scrollHeight, 0);")
+            driver.execute_script("window.scrollTo(document.body.scrollHeight, 0);")
 
 
 def parse_filter_result(driver, csv_writer, width, height, rimsize):
