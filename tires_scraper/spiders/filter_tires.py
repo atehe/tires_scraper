@@ -268,6 +268,8 @@ def parse_filter_result(driver, csv_writer, width, height, rimsize):
 
 
 def extract_filename(url, **kwargs):
-    url = url.strip("/")
-    last_slash_index = url[::-1].index("/")
-    return url[-last_slash_index:]
+    if url:
+
+        url = url.strip("/")
+        last_slash_index = url[::-1].index("/")
+        return url[-last_slash_index:]

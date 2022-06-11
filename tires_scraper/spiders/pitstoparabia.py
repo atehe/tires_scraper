@@ -1,18 +1,20 @@
 import scrapy
 from tires_scraper.spiders.filter_tires import *
 from scrapy_selenium import SeleniumRequest
+import pandas as pd
+import urllib.request
 
 
 def get_tyre_category(tyre_type):
-
-    if "SUV MT" in tyre_type or "SUV AT" in tyre_type:
-        return "Off Road Tyres"
-    if "Car" in tyre_type:
-        return "Car Tyres"
-    if "SUV" in tyre_type:
-        return "SUV Tyres"
-    if "Commercial" in tyre_type:
-        return "Commercial Tyres"
+    if tyre_type:
+        if "SUV MT" in tyre_type or "SUV AT" in tyre_type:
+            return "Off Road Tyres"
+        if "Car" in tyre_type:
+            return "Car Tyres"
+        if "SUV" in tyre_type:
+            return "SUV Tyres"
+        if "Commercial" in tyre_type:
+            return "Commercial Tyres"
 
 
 class PitstoparabiaSpider(scrapy.Spider):
@@ -34,7 +36,7 @@ class PitstoparabiaSpider(scrapy.Spider):
 
         tire_df = pd.read_csv("./utils/all_tires.csv")
         tire_df.drop_duplicates(keep="first", inplace=True)
-        for width, height, rimszize, url in tire_df.values[:20]:
+        for width, height, rimszize, url in tire_df.values[2000:]:
 
             yield SeleniumRequest(
                 url=url,
@@ -73,8 +75,11 @@ class PitstoparabiaSpider(scrapy.Spider):
         service_desc = response.xpath("//div[@class='serv_desc']/text()[2]").get()
         if service_desc:
             service_desc = service_desc.replace("\n", "").strip()
-        tyre_load = service_desc[:-1].strip()
-        tyre_speed = service_desc[-1].strip()
+            tyre_load = service_desc[:-1].strip()
+            tyre_speed = service_desc[-1].strip()
+        else:
+            tyre_load = ""
+            tyre_speed = ""
 
         short_description = name
         if response.xpath("//img[@title='Run Flat']"):
@@ -122,10 +127,10 @@ class PitstoparabiaSpider(scrapy.Spider):
             response.xpath("//span[contains(@id, 'old-price')]/text()").getall()
         ).strip()
         # TODO: add categories xpath
-        ""
         rim_size = response.meta.get("rimsize")
         if rim_size:
             rim_size = f"R{rim_size}"
+
         yield {
             "URL": url,
             "sku": sku,
@@ -166,3 +171,4 @@ class PitstoparabiaSpider(scrapy.Spider):
             "extra_saving_column": extra_saving_column,
             "cash_back": cash_back,
         }
+        # urllib.request.urlretrieve(image_link, f"./tire_images/{image}")
