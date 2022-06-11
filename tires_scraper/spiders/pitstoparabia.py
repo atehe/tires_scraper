@@ -2,45 +2,46 @@ import scrapy
 from tires_scraper.spiders.filter_tires import *
 from scrapy_selenium import SeleniumRequest
 
-DEFAULT_VALUES = {
-    "attribute_set": "Default",
-    "type": "Simple",
-    "qty": 500,
-    "is_in_stock": 1,
-    "manage_stock": 1,
-    "use_config_manage_stock": 1,
-    "status": 1,
-    "visibility": 4,
-    "weight": 1,
-    "tax_class_id": "Taxable Goods",
-}
+
+def get_tyre_category(tyre_type):
+
+    if "SUV MT" in tyre_type or "SUV AT" in tyre_type:
+        return "Off Road Tyres"
+    if "Car" in tyre_type:
+        return "Car Tyres"
+    if "SUV" in tyre_type:
+        return "SUV Tyres"
+    if "Commercial" in tyre_type:
+        return "Commercial Tyres"
 
 
 class PitstoparabiaSpider(scrapy.Spider):
-    name = 'pitstoparabia'
-    allowed_domains = ['www.pitstoparabia.com']
-
+    name = "pitstoparabia"
+    allowed_domains = ["www.pitstoparabia.com"]
 
     def start_requests(self):
-        yield SeleniumRequest(url="https://www.pitstoparabia.com/en/advancesearch?dir=asc&form_key=YTop2Giq9qdZ8Ke2&width=221&height=19&rim_size=235&rear_width=&rear_height=&rear_rim_size=&sizelocation=Dubai", callback=self.tires_to_csv)
+        yield SeleniumRequest(
+            url="https://www.pitstoparabia.com/en/advancesearch?dir=asc&form_key=YTop2Giq9qdZ8Ke2&width=221&height=19&rim_size=235&rear_width=&rear_height=&rear_rim_size=&sizelocation=Dubai",
+            callback=self.tires_to_csv,
+        )
 
     def tires_to_csv(self, response):
-        driver = response.meta['driver']
+        driver = response.meta["driver"]
 
-        # if you do not wish to extract all tires url again
-        # comment the next line of code by adding a '#' character in front
-        parse_filters(driver, 'all_tires.csv')
-        
-        tire_df = pd.read_csv('./utils/all_tires.csv')
-        tire_df.drop_duplicates(keep='first', inplace=True)
-        for width, height, rimszize, url in tire_df.values:
+        # *** if you do not wish to extract all tires url again***
+        # *** comment the next line of code by adding a '#" character in front***
+        # parse_filters(driver, "all_tires.csv")
+
+        tire_df = pd.read_csv("./utils/all_tires.csv")
+        tire_df.drop_duplicates(keep="first", inplace=True)
+        for width, height, rimszize, url in tire_df.values[:20]:
 
             yield SeleniumRequest(
                 url=url,
                 callback=self.parse_tires,
                 meta={"width": width, "height": height, "rimsize": rimszize},
-            )      
-    
+            )
+
     def parse_tires(self, response):
         url = response.request.url
         name = response.xpath(
@@ -74,6 +75,7 @@ class PitstoparabiaSpider(scrapy.Spider):
             service_desc = service_desc.replace("\n", "").strip()
         tyre_load = service_desc[:-1].strip()
         tyre_speed = service_desc[-1].strip()
+
         short_description = name
         if response.xpath("//img[@title='Run Flat']"):
             tyre_run_flat = 1
@@ -120,39 +122,47 @@ class PitstoparabiaSpider(scrapy.Spider):
             response.xpath("//span[contains(@id, 'old-price')]/text()").getall()
         ).strip()
         # TODO: add categories xpath
-
+        ""
+        rim_size = response.meta.get("rimsize")
+        if rim_size:
+            rim_size = f"R{rim_size}"
         yield {
             "URL": url,
-            "Manufacturer": manufacturer,
-            "Name": name,
-            "SKU": sku,
-            "Country of Manufacture": country_of_manufacture,
-            "Year of Manufacture": year_of_manufacture,
-            "Description": description,
-            "Short Description": short_description,
-            "Width": response.meta.get("width"),
-            "Height": response.meta.get("height"),
-            "Rim Size": response.meta.get("rimsize"),
-            "Service Desc": service_desc,
-            "Tyre Load": tyre_load,
-            "Tyre Speed": tyre_speed,
-            "Tyre Run Flat": tyre_run_flat,
-            "Tyre Type": tyre_type,
-            "Sidewall": sidewall,
-            "Image Link": image_link,
-            "Image": image,
-            "Thumbnail": thumbnail,
-            "Price": special_price,
-            "Old Price": old_price,
-            "Small Image": small_image,
-            "Cash Back": cash_back,
-            "Buy 3 get 1 Free": buy_3_get_1_free,
-            "Type is Clearance": type_is_clearance,
-            "Extra Saving Column": extra_saving_column,
-            "Rating Stars": rating_stars,
-            "Number of Reviews": num_reviews,
+            "sku": sku,
+            "name": name,
+            "attribute_set": "Default",
+            "type": "Simple",
+            "categories": get_tyre_category(tyre_type),
+            "description": description,
+            "short_description": short_description,
+            "price": old_price,
+            "qty": 500,
+            "is_in_stock": 1,
+            "manage_stock": 1,
+            "use_config_manage_stock": 1,
+            "status": 1,
+            "visibility": 4,
+            "weight": 1,
+            "tax_class_id": "Taxable Goods",
+            "image_link": image_link,
+            "image": image,
+            "thumbnail": thumbnail,
+            "small_image": small_image,
+            "manufacturer": manufacturer,
+            "country_of_manufacture": country_of_manufacture,
+            "sidewall": sidewall,
+            "special_price": special_price,
+            "tyre_width": response.meta.get("width"),
+            "tyre_height": response.meta.get("height"),
+            "tyre_rim_size": rim_size,
+            "tyre_load": tyre_load,
+            "tyre_speed": tyre_speed,
+            "tyre_type": tyre_type,
+            "year_of_manufacture": year_of_manufacture,
+            "type_is_clearance": type_is_clearance,
+            "buy_3_get_1_Free": buy_3_get_1_free,
+            # "service Desc": service_desc,
+            "tyre_run_flat": tyre_run_flat,
+            "extra_saving_column": extra_saving_column,
+            "cash_back": cash_back,
         }
-
-
-
-
