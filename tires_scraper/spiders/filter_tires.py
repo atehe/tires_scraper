@@ -131,7 +131,6 @@ def rim_options(driver):
 
 
 def parse_filters(driver, output_csv):
-    output_csv = f"./utils/{output_csv}"
     with open(output_csv, "a") as tires:
         tire_writer = writer(tires)
         tire_writer.writerow(("width", "height", "rimsize", "tire url"))
