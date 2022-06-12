@@ -52,7 +52,7 @@ class PitstoparabiaSpider(scrapy.Spider):
             logging.critical(f">>> ERROR: Tires filter parsing ")
 
         tire_df = pd.read_csv("./utils/all_tires.csv")
-        tire_df.drop_duplicates(keep="first", inplace=True)
+        tire_df.drop_duplicates(keep="first", subset="URL", inplace=True)
         for width, height, rimszize, url in tire_df.values:
             if url.startswith("http"):
 
@@ -151,6 +151,9 @@ class PitstoparabiaSpider(scrapy.Spider):
             )
             if price:
                 price = price.strip()
+
+            if special_price and not price:
+                price = "special price + 20%"
             rim_size = response.meta.get("rimsize")
             if rim_size:
                 rim_size = f"R{rim_size}"
