@@ -17,6 +17,21 @@ def get_tyre_category(tyre_type):
             return "Commercial Tyres"
 
 
+def download_image(url, filename):
+    try:
+        opener = urllib.request.build_opener()
+        opener.addheaders = [
+            (
+                "User-Agent",
+                "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1941.0 Safari/537.36",
+            )
+        ]
+        urllib.request.install_opener(opener)
+        urllib.request.urlretrieve(url, f"./utils/{filename}")
+    except:
+        logging.error(f">>> {filename} couldn't be downloaded")
+
+
 class PitstoparabiaSpider(scrapy.Spider):
     name = "pitstoparabia"
     allowed_domains = ["www.pitstoparabia.com"]
@@ -30,8 +45,10 @@ class PitstoparabiaSpider(scrapy.Spider):
     def tires_to_csv(self, response):
         driver = response.meta["driver"]
 
-        # if not os.path.exists("./utils/all_tires.csv"):
-        parse_filters(driver, "./utils/all_tires.csv")
+        try:
+            parse_filters(driver, "./utils/all_tires.csv")
+        except:
+            logging.critical(f">>> ERROR: Tires filter parsing ")
 
         tire_df = pd.read_csv("./utils/all_tires.csv")
         tire_df.drop_duplicates(keep="first", inplace=True)
@@ -124,11 +141,16 @@ class PitstoparabiaSpider(scrapy.Spider):
             ).get()
             special_price = "".join(
                 response.xpath("//span[contains(@id, 'product-price')]/text()").getall()
-            ).strip()
-            old_price = "".join(
-                response.xpath("//span[contains(@id, 'old-price')]/text()").getall()
-            ).strip()
-            # TODO: add categories xpath
+            ) or "".join(response.xpath("///li[@class='set_price']/text()").getall())
+            if special_price:
+                special_price.strip()
+            price = "".join(
+                response.xpath(
+                    "//span[contains(@id, 'old-price') or (@class='price')]/text()"
+                ).getall()
+            )
+            if price:
+                price = price.strip()
             rim_size = response.meta.get("rimsize")
             if rim_size:
                 rim_size = f"R{rim_size}"
@@ -142,7 +164,7 @@ class PitstoparabiaSpider(scrapy.Spider):
                 "categories": get_tyre_category(tyre_type),
                 "description": description,
                 "short_description": short_description,
-                "price": old_price,
+                "price": price,
                 "qty": 500,
                 "is_in_stock": 1,
                 "manage_stock": 1,
@@ -172,5 +194,6 @@ class PitstoparabiaSpider(scrapy.Spider):
                 "extra_saving_column": extra_saving_column,
                 "cash_back": cash_back,
             }
+            download_image(image_link, image)
         except:
             pass
