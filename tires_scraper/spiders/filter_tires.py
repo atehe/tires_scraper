@@ -173,10 +173,11 @@ def parse_filters(driver, output_csv):
                             rim_selected,
                         )
                         if (
-                            r == len(rims) - 1
-                            and h == len(heights) - 1
-                            and w == len(widths) - 1
+                            w == (len(widths) - 1)
+                            and h == (len(heights) - 1)
+                            and r == (len(rims) - 1)
                         ):
+                            loop_break = True
                             break
 
                         refine_result_bar = driver.find_element(
@@ -187,11 +188,14 @@ def parse_filters(driver, output_csv):
                         # update driver elements to be selected next
                         if r < len(rims) - 1:
                             rims = rim_options(driver)
-
                     if h < len(heights) - 1:
                         heights = height_options(driver)
+                    if loop_break:
+                        break
                 if w < len(widths) - 1:
                     widths = width_options(driver)
+                if loop_break:
+                    break
 
 
 def load_all_tires(driver):
@@ -278,7 +282,6 @@ def parse_filter_result(driver, csv_writer, width, height, rimsize):
 
 def extract_filename(url, **kwargs):
     if url:
-
         url = url.strip("/")
         last_slash_index = url[::-1].index("/")
         return url[-last_slash_index:]

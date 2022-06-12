@@ -46,10 +46,10 @@ class PitstoparabiaSpider(scrapy.Spider):
     def tires_to_csv(self, response):
         driver = response.meta["driver"]
 
-        # try:
-        #     parse_filters(driver, "./utils/all_tires.csv")
-        # except:
-        #     logging.critical(f">>> ERROR: Tires filter parsing ")
+        try:
+            parse_filters(driver, "./utils/all_tires.csv")
+        except:
+            logging.critical(f">>> ERROR: Tires filter parsing ")
 
         tire_df = pd.read_csv("./utils/all_tires.csv")
         tire_df.drop_duplicates(keep="first", inplace=True)
