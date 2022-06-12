@@ -53,13 +53,14 @@ class PitstoparabiaSpider(scrapy.Spider):
 
         tire_df = pd.read_csv("./utils/all_tires.csv")
         tire_df.drop_duplicates(keep="first", inplace=True)
-        for width, height, rimszize, url in tire_df.values[300:400]:
+        for width, height, rimszize, url in tire_df.values:
+            if url.startswith("http"):
 
-            yield SeleniumRequest(
-                url=url,
-                callback=self.parse_tires,
-                meta={"width": width, "height": height, "rimsize": rimszize},
-            )
+                yield SeleniumRequest(
+                    url=url,
+                    callback=self.parse_tires,
+                    meta={"width": width, "height": height, "rimsize": rimszize},
+                )
 
     def parse_tires(self, response):
         try:
