@@ -19,15 +19,16 @@ def get_tyre_category(tyre_type):
 
 def download_image(url, filename):
     try:
-        opener = urllib.request.build_opener()
-        opener.addheaders = [
-            (
-                "User-Agent",
-                "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1941.0 Safari/537.36",
-            )
-        ]
-        urllib.request.install_opener(opener)
-        urllib.request.urlretrieve(url, f"./utils/{filename}")
+        if not os.path.exists(f"./tires_image/{filename}"):
+            opener = urllib.request.build_opener()
+            opener.addheaders = [
+                (
+                    "User-Agent",
+                    "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1941.0 Safari/537.36",
+                )
+            ]
+            urllib.request.install_opener(opener)
+            urllib.request.urlretrieve(url, f"./tires_image/{filename}")
     except:
         logging.error(f">>> {filename} couldn't be downloaded")
 
@@ -45,14 +46,14 @@ class PitstoparabiaSpider(scrapy.Spider):
     def tires_to_csv(self, response):
         driver = response.meta["driver"]
 
-        try:
-            parse_filters(driver, "./utils/all_tires.csv")
-        except:
-            logging.critical(f">>> ERROR: Tires filter parsing ")
+        # try:
+        #     parse_filters(driver, "./utils/all_tires.csv")
+        # except:
+        #     logging.critical(f">>> ERROR: Tires filter parsing ")
 
         tire_df = pd.read_csv("./utils/all_tires.csv")
         tire_df.drop_duplicates(keep="first", inplace=True)
-        for width, height, rimszize, url in tire_df.values:
+        for width, height, rimszize, url in tire_df.values[300:400]:
 
             yield SeleniumRequest(
                 url=url,
@@ -141,13 +142,11 @@ class PitstoparabiaSpider(scrapy.Spider):
             ).get()
             special_price = "".join(
                 response.xpath("//span[contains(@id, 'product-price')]/text()").getall()
-            ) or "".join(response.xpath("///li[@class='set_price']/text()").getall())
+            )
             if special_price:
                 special_price.strip()
             price = "".join(
-                response.xpath(
-                    "//span[contains(@id, 'old-price') or (@class='price')]/text()"
-                ).getall()
+                response.xpath("//span[contains(@id, 'old-price')]/text()").getall()
             )
             if price:
                 price = price.strip()
