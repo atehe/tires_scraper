@@ -4,10 +4,9 @@ from scrapy_selenium import SeleniumRequest
 import pandas as pd
 import urllib.request
 
-
 def get_tyre_category(tyre_type):
     if tyre_type:
-        if "SUV MT" in tyre_type or "SUV AT" in tyre_type:
+        if "SUV MT" in tyre_type or "SUsV AT" in tyre_type:
             return "Off Road Tyres"
         if "Car" in tyre_type:
             return "Car Tyres"
@@ -17,9 +16,12 @@ def get_tyre_category(tyre_type):
             return "Commercial Tyres"
 
 
-def download_image(url, filename):
+def download_image(url, folder_name, filename):
     try:
-        if not os.path.exists(f"./tires_image/{filename}"):
+        if not os.path.exists(folder_name):
+            os.makedirs(folder_name)
+
+        if not os.path.exists(f"./{folder_name}/{filename}"):
             opener = urllib.request.build_opener()
             opener.addheaders = [
                 (
@@ -28,9 +30,10 @@ def download_image(url, filename):
                 )
             ]
             urllib.request.install_opener(opener)
-            urllib.request.urlretrieve(url, f"./tires_image/{filename}")
+            urllib.request.urlretrieve(url, f"./{folder_name}/{filename}")
+            logging.info(f">>> Image: {filename} downloaded")
     except:
-        logging.error(f">>> {filename} couldn't be downloaded")
+        logging.error(f">>> Image: {filename} couldn't be downloaded")
 
 
 class PitstoparabiaSpider(scrapy.Spider):
@@ -44,18 +47,17 @@ class PitstoparabiaSpider(scrapy.Spider):
         )
 
     def tires_to_csv(self, response):
+        """Parses the filter and creates csv containing all tires filtered by the tire sizes"""
         driver = response.meta["driver"]
 
-        try:
-            parse_filters(driver, "./utils/all_tires.csv")
-        except:
-            logging.critical(f">>> ERROR: Tires filter parsing ")
+        tire_url_csv = getattr(self,"url_csv" )
+        
+        parse_filters(driver, tire_url_csv)
 
-        tire_df = pd.read_csv("./utils/all_tires.csv")
-        tire_df.drop_duplicates(keep="first", subset="URL", inplace=True)
+        tire_df = pd.read_csv(tire_url_csv)
+        tire_df.drop_duplicates(keep="first", subset="tire url", inplace=True)
         for width, height, rimszize, url in tire_df.values:
             if url.startswith("http"):
-
                 yield SeleniumRequest(
                     url=url,
                     callback=self.parse_tires,
@@ -63,6 +65,7 @@ class PitstoparabiaSpider(scrapy.Spider):
                 )
 
     def parse_tires(self, response):
+        """Extract data from all tire pages"""
         try:
             url = response.request.url
             name = response.xpath(
@@ -130,27 +133,21 @@ class PitstoparabiaSpider(scrapy.Spider):
                 "//div[@class='rating-stars']/following-sibling::h3/text()"
             ).get()
 
-            num_reviews = response.xpath("//a[@id='open_review_tab']//text()").get()
-            if num_reviews:
-                num_reviews = (
-                    num_reviews.replace("Reviews", "")
-                    .replace("(", "")
-                    .replace(")", "")
-                    .strip()
-                )
             warranty = response.xpath(
                 "//div[@class='warranty']/span[@class='w_year']/text()"
             ).get()
             special_price = "".join(
                 response.xpath("//span[contains(@id, 'product-price')]/text()").getall()
+            ) or "".join(
+                response.xpath("//span[@class='price']/text()").getall()
             )
             if special_price:
-                special_price.strip()
+                special_price.replace("\n", '').strip()
             price = "".join(
                 response.xpath("//span[contains(@id, 'old-price')]/text()").getall()
             )
             if price:
-                price = price.strip()
+                price = price.replace("\n", '').strip()
 
             if special_price and not price:
                 price = "special price + 20%"
@@ -196,7 +193,11 @@ class PitstoparabiaSpider(scrapy.Spider):
                 "tyre_run_flat": tyre_run_flat,
                 "extra_saving_column": extra_saving_column,
                 "cash_back": cash_back,
+                "warranty": warranty
             }
-            download_image(image_link, image)
+            folder = getattr(self, 'image_folder')
+            download_image(image_link, folder, image)
         except:
             pass
+
+

@@ -2,17 +2,13 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
-from scrapy.selector import Selector
 from selenium.webdriver.common.action_chains import ActionChains
 from csv import writer
 from selenium.webdriver.chrome.options import Options
-from fake_useragent import UserAgent
-import undetected_chromedriver as uc
 import logging, json, os, sys, time, random
+from scrapy.selector import Selector
 from selenium import webdriver
-
-
-logging.basicConfig(level=logging.INFO)
+import pandas as pd
 
 
 def extract_num(text):
@@ -142,7 +138,7 @@ def parse_filters(driver, output_csv):
             )
             click(refine_result_bar, driver)
 
-            widths = width_options(driver)
+            widths = width_options(driver)[22:]
             for w, width in enumerate(widths):
                 width_selected = select_n_close(widths[w], driver)
 
@@ -160,7 +156,7 @@ def parse_filters(driver, output_csv):
                         )
                         click(search, driver)
                         logging.info(
-                            f">>> Filter: {(width_selected, height_selected, rim_selected)}"
+                            f">>> Filter selected: {(width_selected, height_selected, rim_selected)}"
                         )
 
                         load_all_tires(driver)
@@ -172,6 +168,20 @@ def parse_filters(driver, output_csv):
                             height_selected,
                             rim_selected,
                         )
+                        logging.info(
+                            f""">>> Extracted all Tyres for:
+                                    - width: {width_selected}
+                                    - height: {height_selected}
+                                    - rimsize: {rim_selected}"""
+                            )
+
+                        refine_result_bar = driver.find_element(
+                            by=By.XPATH, value="//div[@id='accordion_refine_result']"
+                        )
+                        click(refine_result_bar, driver)
+                        logging.info((w,h,r))
+                        logging.info((len(heights),len(heights), len(rims)))
+
                         if (
                             w == (len(widths) - 1)
                             and h == (len(heights) - 1)
@@ -179,24 +189,20 @@ def parse_filters(driver, output_csv):
                         ):
                             loop_break = True
                             break
-
-                        refine_result_bar = driver.find_element(
-                            by=By.XPATH, value="//div[@id='accordion_refine_result']"
-                        )
-                        click(refine_result_bar, driver)
-
+                        loop_break = False
                         # update driver elements to be selected next
                         if r < len(rims) - 1:
                             rims = rim_options(driver)
                     if h < len(heights) - 1:
                         heights = height_options(driver)
-                    if loop_break:
+                    elif loop_break:
                         break
                 if w < len(widths) - 1:
-                    widths = width_options(driver)
-                if loop_break:
+                    widths = width_options(driver)[22:]
+                elif loop_break:
                     break
-
+            if loop_break:
+                break
 
 def load_all_tires(driver):
     try:
@@ -219,6 +225,8 @@ def load_all_tires(driver):
     ).text
     load_count = 0
     while len(tires_loaded) < extract_num(num_tires):
+        if load_count == 0:
+            logging.info(f">>> page scrolling...")
         if load_count > 20:
             try:
                 scroll_up(driver)
@@ -238,7 +246,7 @@ def load_all_tires(driver):
         tires_loaded = driver.find_elements(
             by=By.XPATH, value="//div[@id='all-grid']//li/div"
         )
-    logging.info(">>> All Tires loaded")
+    logging.debug(">>> All Tires loaded")
     time.sleep(1)
 
     if load_count > 1:
@@ -277,7 +285,7 @@ def parse_filter_result(driver, csv_writer, width, height, rimsize):
             url = url.strip("/")
             url = f"https://www.pitstoparabia.com/{url}"
         csv_writer.writerow((width, height, rimsize, url))
-    logging.info(f">>> Tires for {width}, {height}, {rimsize} extracted successfully")
+    logging.debug(f">>> Tires for {width}, {height}, {rimsize} extracted successfully")
 
 
 def extract_filename(url, **kwargs):

@@ -88,7 +88,8 @@ DOWNLOADER_MIDDLEWARES = {"scrapy_selenium.SeleniumMiddleware": 800}
 
 # Configure scrapy_selenium
 SELENIUM_DRIVER_NAME = "chrome"
-SELENIUM_DRIVER_EXECUTABLE_PATH = "./utils/chromedriver"
-SELENIUM_DRIVER_ARGUMENTS = ["--head"]
-
+SELENIUM_DRIVER_EXECUTABLE_PATH = "./utils/chromedriver.exe"
+SELENIUM_DRIVER_ARGUMENTS = ["--head"] 
 FEED_EXPORT_ENCODING = "utf-8"
+
+LOG_LEVEL = 'INFO'
